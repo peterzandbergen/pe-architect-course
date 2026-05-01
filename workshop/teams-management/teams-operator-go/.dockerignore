@@ -1,0 +1,6 @@
+PLAN.md
+*.md
+build.sh
+deployment.yaml
+.git
+.gitignore
