@@ -8,3 +8,5 @@ bin
 **/pyenv/lib/
 *.tar
 **/.angular/
+**/lib/python3.12
+**/my-api/lib64

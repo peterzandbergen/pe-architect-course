@@ -1,17 +1,20 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: grafana-ingress
+  name: my-api
+  labels:
+    app: my-api
 spec:
   ingressClassName: nginx
   rules:
-  - host: grafana.127.0.0.1.sslip.io
+  - host: rollouts-demo.127.0.0.1.sslip.io
     http:
       paths:
-      - backend:
+      - path: /
+        pathType: Prefix
+        backend:
           service:
-            name: grafana-stack
+            name: rollouts-demo
             port:
               number: 80
-        path: /
-        pathType: Prefix
+        

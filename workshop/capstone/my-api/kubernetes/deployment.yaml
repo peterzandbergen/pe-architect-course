@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: my-api
+  name: my-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: my-api
+  template:
+    metadata:
+      labels:
+        app: my-api
+    spec:
+      securityContext:
+        runAsNonRoot: false
+        # runAsUser: 1000
+        # runAsGroup: 3000
+        # fsGroup: 2000
+      containers:
+      - image: docker.io/peterzandbergen/pe-arch-my-api:v1
+        name: my-api
+        resources: {}
