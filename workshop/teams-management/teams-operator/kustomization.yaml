@@ -25,3 +25,10 @@ patches:
         value:
           name: LOG_LEVEL
           value: "INFO"
+      - op: replace
+        path: /spec/template/spec/containers/0/env/0/value
+        value: "http://teams-api-service.teams-api.svc.cluster.local:4200"
+
+
+
+    

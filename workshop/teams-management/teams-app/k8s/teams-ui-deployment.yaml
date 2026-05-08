@@ -27,7 +27,7 @@ spec:
         runAsNonRoot: true
       containers:
       - name: teams-ui
-        image: teams-ui:local-v1
+        image: teams-ui:local-v3
         # image: olivercodes01/teams-app:0.0.7
         ports:
         - containerPort: 8080
