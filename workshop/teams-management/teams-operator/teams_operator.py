@@ -13,9 +13,11 @@ import aiohttp
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 
+log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=log_level,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger('teams-operator')
@@ -57,6 +59,25 @@ class TeamsOperator:
         namespace = f"team-{namespace}"
         
         return namespace
+
+    async def get_current_namespaces(self) -> Set[str]:
+        """Get current namespaces managed by the operator"""
+        try:
+            namespaces = self.k8s_core_v1.list_namespace()
+            managed_namespaces = set()
+            for ns in namespaces.items:
+                if ns.metadata.labels and ns.metadata.labels.get("app.kubernetes.io/managed-by") == "teams-operator":
+                    team_id = ns.metadata.labels.get("teams.example.com/team-id")
+                    if team_id:
+                        managed_namespaces.add(team_id)
+            logger.debug(f"Current managed namespaces: {managed_namespaces}")
+            return managed_namespaces
+        except ApiException as e:
+            logger.error(f"Error fetching namespaces: {e}")
+            return set()
+        except Exception as e:
+            logger.error(f"Unexpected error fetching namespaces: {e}")
+            return set()
     
     async def fetch_teams(self) -> list:
         """Fetch current teams from the Teams API"""
@@ -65,7 +86,7 @@ class TeamsOperator:
                 async with session.get(f"{self.teams_api_url}/teams") as response:
                     if response.status == 200:
                         teams = await response.json()
-                        logger.debug(f"Fetched {len(teams)} teams from API")
+                        logger.debug(f"Fetched {len(teams)} teams from API {self.teams_api_url}/teams")
                         return teams
                     else:
                         logger.error(f"Failed to fetch teams: HTTP {response.status}")
@@ -133,11 +154,24 @@ class TeamsOperator:
     async def reconcile_teams(self):
         """Main reconciliation loop - sync teams with namespaces"""
         teams = await self.fetch_teams()
+        # Current teams are the teams in the API
         current_teams = {team['id']: team for team in teams}
         current_team_ids = set(current_teams.keys())
+
+        # Get the actual teams from the cluster
+        actual_teams = await self.get_current_namespaces()
+        logger.debug(f"Actual teams from cluster: {actual_teams}")
+
+        # Update known teams to reflect the actual state of the cluster before processing changes
+        self.known_teams = actual_teams
+
+        logger.debug(f"Current teams from API: {current_team_ids}")
+        logger.debug(f"Known teams: {self.known_teams}")
         
         # Handle new teams (create namespaces)
+        # known_teams are the teams the operator knows to exist
         new_teams = current_team_ids - self.known_teams
+        logger.debug(f"New teams to add: {new_teams}")
         for team_id in new_teams:
             team = current_teams[team_id]
             team_name = team['name']
@@ -148,6 +182,7 @@ class TeamsOperator:
         
         # Handle deleted teams (remove namespaces)
         deleted_teams = self.known_teams - current_team_ids
+        logger.debug(f"Deleted teams to remove: {deleted_teams}")
         for team_id in deleted_teams:
             if team_id in self.team_namespaces:
                 namespace_name = self.team_namespaces[team_id]

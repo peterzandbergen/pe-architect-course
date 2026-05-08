@@ -21,5 +21,20 @@ spec:
       containers:
       - name: web
         image: nginx:1.21
+        command:
+          - nginx
+        args:
+          - "-default-http-listener-port"
+          - "8080"
         ports:
-        - containerPort: 8080
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        volumeMounts:
+          - name: var-cache-nginx
+            mountPath: /var/cache/nginx
+            readOnly: false
+      volumes:
+        - name: var-cache-nginx
+          emptyDir: {}
+

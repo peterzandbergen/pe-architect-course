@@ -1,0 +1,18 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+  name: teams-operator-api-ingress
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: teams-operator-api.127.0.0.1.sslip.io
+    http:
+      paths:
+      - backend:
+          service:
+            name: teams-api-service
+            port:
+              number: 8000
+        path: /
+        pathType: Prefix

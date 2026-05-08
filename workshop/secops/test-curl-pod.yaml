@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: test-curl
+  name: test-curl
+spec:
+  containers:
+  - image: curlimages/curl
+    name: test-curl
+    resources: {}
+    command:
+      - /bin/sh
+    args:
+      - -c 
+      - "sleep 3000"
+  dnsPolicy: ClusterFirst
+  restartPolicy: Never
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000

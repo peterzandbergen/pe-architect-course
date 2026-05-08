@@ -39,6 +39,10 @@ async def root():
 @app.post("/teams", response_model=Team)
 async def create_team(team: TeamCreate):
     """Create a new team"""
+    # Check if team name is empty
+    if not team.name.strip():
+        raise HTTPException(status_code=400, detail="Team name cannot be empty")
+
     # Check if team name already exists
     for existing_team in teams_store.values():
         if existing_team["name"].lower() == team.name.lower():

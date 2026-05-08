@@ -26,7 +26,8 @@ spec:
           type: RuntimeDefault
       containers:
       - name: teams-api
-        image: olivercodes01/teams-api:0.0.2
+        # image: olivercodes01/teams-api:0.0.2
+        image: teams-api:local
         ports:
         - containerPort: 8000
         env:
@@ -87,8 +88,8 @@ metadata:
     traefik.ingress.kubernetes.io/headers.accesscontrolallowmethods: GET,POST,PUT,DELETE,OPTIONS
     traefik.ingress.kubernetes.io/headers.accesscontrolalloworigin: "*"
     traefik.ingress.kubernetes.io/headers.accesscontrolallowheaders: Content-Type,Authorization,X-Requested-With
-    kubernetes.io/ingress.class: traefik
 spec:
+  ingressClassName: nginx
   rules:
   - host: teams-api.127.0.0.1.sslip.io
     http:

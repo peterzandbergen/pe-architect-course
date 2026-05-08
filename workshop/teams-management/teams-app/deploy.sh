@@ -14,8 +14,8 @@ NC='\033[0m' # No Color
 
 # Configuration
 NAMESPACE="engineering-platform"
-UI_IMAGE="teams-ui:latest"
-API_IMAGE="teams-api:latest"
+UI_IMAGE="teams-ui:local-v1"
+API_IMAGE="teams-api:local"
 
 # Functions
 log_info() {
@@ -106,11 +106,11 @@ deploy_k8s() {
     log_info "Deploying to Kubernetes..."
 
     # Create namespace if it doesn't exist
-    kubectl create namespace $NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
-    log_success "Namespace '$NAMESPACE' ready"
+    # kubectl create namespace $NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
+    # log_success "Namespace '$NAMESPACE' ready"
 
     # Apply Kubernetes manifests
-    kubectl apply -f k8s/
+    kubectl apply -k k8s/
 
     log_success "Kubernetes resources deployed"
 
@@ -156,9 +156,14 @@ rollback() {
 # Clean up resources
 cleanup() {
     log_warning "Cleaning up Kubernetes resources..."
-    kubectl delete -f k8s/
-    kubectl delete namespace $NAMESPACE
+    kubectl delete -k k8s/
     log_success "Cleanup completed"
+}
+
+load_images_to_kind() {
+    log_info "Loading images into kind cluster..."
+    kind load docker-image $UI_IMAGE --name "5min-idp"
+    kind load docker-image $API_IMAGE --name "5min-idp"
 }
 
 # Main deployment function
@@ -169,6 +174,7 @@ deploy() {
     check_docker
     build_ui
     build_images
+    load_images_to_kind
     deploy_k8s
     check_status
 
@@ -192,6 +198,9 @@ case "${1:-deploy}" in
     "build")
         build_ui
         build_images
+        ;;
+    "load")
+        load_images_to_kind
         ;;
     *)
         echo "Usage: $0 {deploy|rollback|cleanup|status|build}"

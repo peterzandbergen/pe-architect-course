@@ -32,11 +32,12 @@ subjects:
   name: teams-operator
   namespace: engineering-platform
 ---
+# Moved to separate file
 # Namespace for the operator
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: engineering-platform
+# apiVersion: v1
+# kind: Namespace
+# metadata:
+#   name: engineering-platform
 ---
 # Deployment for the Teams Operator
 apiVersion: apps/v1
@@ -71,7 +72,7 @@ spec:
         image: olivercodes01/teams-operator:0.0.1
         env:
         - name: TEAMS_API_URL
-          value: "http://teams-api-service.engineering-platform.svc.cluster.local:4200"
+          value: "http://teams-api-service.engineering-platform.svc.cluster.local:8000"
         - name: POLL_INTERVAL
           value: "30"
         securityContext:

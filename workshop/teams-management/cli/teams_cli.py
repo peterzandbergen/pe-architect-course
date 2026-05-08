@@ -7,22 +7,43 @@ import argparse
 import json
 import sys
 import requests
+import os
+import logging
 from typing import Optional
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+)
 
 API_BASE_URL = "http://teams-api.127.0.0.1.sslip.io"
 
 class TeamsAPI:
-    def __init__(self, base_url: str = API_BASE_URL):
+
+    def __init__(self, base_url: str = API_BASE_URL, json_output: Optional[bool] = False, token: Optional[str] = None):
         self.base_url = base_url
+        self.json_output = json_output
+        self.token = token
         
     def _make_request(self, method: str, endpoint: str, data: Optional[dict] = None) -> dict:
         """Make HTTP request to the API"""
         url = f"{self.base_url}{endpoint}"
+
+        session = requests.Session()
+        if self.token:
+            logging.info("Using authentication token for API requests")
+            session.headers.update({
+                "Authorization": f"Bearer {self.token}"
+            })
+        else:
+            logging.info("No authentication token provided, making unauthenticated requests")
+
         try:
             if method == "GET":
-                response = requests.get(url)
+                response = session.get(url)
             elif method == "POST":
-                response = requests.post(url, json=data, headers={"Content-Type": "application/json"})
+                session.headers.update({"Content-Type": "application/json"})
+                response = requests.post(url, json=data)
             elif method == "DELETE":
                 response = requests.delete(url)
             else:
@@ -50,6 +71,11 @@ class TeamsAPI:
     def health_check(self):
         """Check API health"""
         result = self._make_request("GET", "/health")
+
+        if self.json_output:
+            self.print_json(result)
+            return
+        
         status = result.get("status", "unknown")
         teams_count = result.get("teams_count", 0)
         print(f"✅ API Status: {status}")
@@ -58,6 +84,11 @@ class TeamsAPI:
     def create_team(self, name: str):
         """Create a new team"""
         result = self._make_request("POST", "/teams", {"name": name})
+
+        if self.json_output:
+            self.print_json(result)
+            return
+        
         print(f"✅ Created team: {result['name']}")
         print(f"🆔 Team ID: {result['id']}")
         print(f"📅 Created: {result['created_at']}")
@@ -68,26 +99,46 @@ class TeamsAPI:
         if not teams:
             print("📭 No teams found")
             return
+
+        if self.json_output:
+            self.print_json(teams)
+            return
             
         print(f"📋 Found {len(teams)} team(s):")
         print("-" * 60)
         for team in teams:
-            print(f"🏷️  Name: {team['name']}")
-            print(f"🆔 ID: {team['id']}")
-            print(f"📅 Created: {team['created_at']}")
+            self.print_team(team)
             print("-" * 60)
 
     def get_team(self, team_id: str):
         """Get a specific team by ID"""
         team = self._make_request("GET", f"/teams/{team_id}")
-        print(f"🏷️  Name: {team['name']}")
-        print(f"🆔 ID: {team['id']}")
-        print(f"📅 Created: {team['created_at']}")
+
+        if self.json_output:
+            self.print_json(team)
+            return
+        
+        self.print_team(team)
 
     def delete_team(self, team_id: str):
         """Delete a team"""
         result = self._make_request("DELETE", f"/teams/{team_id}")
+
+        if self.json_output:
+            self.print_json(result)
+            return
+
         print(f"✅ {result['message']}")
+
+    def print_team(self, team):
+        """Helper method to print team details"""
+        print(f"🏷️  Name: {team['name']}")
+        print(f"🆔 ID: {team['id']}")
+        print(f"📅 Created: {team['created_at']}")
+
+    def print_json(self, data):
+        """Helper method to print JSON data in a readable format"""
+        print(json.dumps(data, indent=2))
 
 def main():
     parser = argparse.ArgumentParser(
@@ -105,8 +156,21 @@ Examples:
     
     parser.add_argument(
         "--url", 
-        default=API_BASE_URL,
+        default=os.environ.get("TEAMS_API_URL", API_BASE_URL),
         help=f"API base URL (default: {API_BASE_URL})"
+    )
+    
+    parser.add_argument(
+        "--json", 
+        default=os.environ.get("TEAMS_CLI_JSON", "false").lower() == "true",
+        help=f"Output JSON",
+        action='store_true'
+    )
+
+    parser.add_argument(
+        "--token",
+        default=os.environ.get("TEAMS_API_TOKEN"),
+        help="API authentication token (optional)"
     )
     
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
@@ -136,7 +200,7 @@ Examples:
         return
     
     # Initialize API client
-    api = TeamsAPI(args.url)
+    api = TeamsAPI(args.url, args.json, args.token)
     
     # Execute command
     try:
