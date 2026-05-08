@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: gatekeeper-system
+
+resources:
+- config.yaml
+- deny-prod-deployment-constraint.yaml
+- deny-prod-deployment-template.yaml
