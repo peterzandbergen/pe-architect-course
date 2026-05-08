@@ -1,0 +1,20 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: argo-rollouts-metrics
+  namespace: argo-rollouts
+  labels:
+    # This is the "key" that opens the door you just found
+    release: grafana-stack
+spec:
+  selector:
+    matchLabels:
+      # This matches the 'argo-rollouts-metrics' service
+      app.kubernetes.io/name: argo-rollouts-metrics
+  namespaceSelector:
+    matchNames:
+      - argo-rollouts
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
