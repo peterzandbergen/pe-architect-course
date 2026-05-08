@@ -12,6 +12,7 @@ metadata:
   namespace: keycloak
   labels:
     app: keycloak-postgres
+    occurence: "1"
 spec:
   replicas: 1
   selector:
@@ -72,6 +73,7 @@ metadata:
   namespace: keycloak
   labels:
     app: keycloak
+    occurence: "2"
 spec:
   replicas: 1
   selector:
@@ -170,6 +172,8 @@ kind: Ingress
 metadata:
   name: keycloak-ingress
   namespace: keycloak
+  labels:
+    occurence: "1"
   annotations:
     # Tells Nginx to pass the 'Host' header (which includes :8000)
     nginx.ingress.kubernetes.io/proxy-set-headers: "true"
@@ -204,6 +208,8 @@ kind: ConfigMap
 metadata:
   name: keycloak-realm-config
   namespace: keycloak
+  labels:
+    occurence: "1"
 data:
   teams-realm.json: |
     {
@@ -291,145 +297,4 @@ data:
         ]
       }
     }
-apiVersion: v1
-kind: Service
-metadata:
-  name: keycloak-service
-  namespace: keycloak
-spec:
-  selector:
-    app: keycloak
-  ports:
-  - port: 8080
-    targetPort: 8080
-    name: http
-
 ---
-# k8s/keycloak-ingress.yaml
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: keycloak-ingress
-  namespace: keycloak
-  annotations:
-    # Tells Nginx to pass the 'Host' header (which includes :8000)
-    nginx.ingress.kubernetes.io/proxy-set-headers: "true"
-    # Essential for Keycloak to trust the proxy headers
-    nginx.ingress.kubernetes.io/use-forwarded-headers: "true"
-    # Increases buffer size to handle large Keycloak tokens/headers
-    nginx.ingress.kubernetes.io/proxy-buffer-size: "128k"
-    nginx.ingress.kubernetes.io/proxy-buffers-number: "4"
-    nginx.ingress.kubernetes.io/enable-cors: "true"
-    nginx.ingress.kubernetes.io/cors-allow-origin: "http://teams-ui.127.0.0.1.sslip.io,http://teams-ui.127.0.0.1.sslip.io:8000,http://localhost:4200"
-    nginx.ingress.kubernetes.io/cors-allow-methods: "GET,POST,PUT,DELETE,OPTIONS"
-    nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization,Content-Type"
-    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
-spec:
-  ingressClassName: nginx
-  rules:
-  - host: platform-auth.127.0.0.1.sslip.io
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: keycloak-service
-            port:
-              number: 8080
-
----
-# k8s/keycloak-realm-config.yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: keycloak-realm-config
-  namespace: keycloak
-data:
-  teams-realm.json: |
-    {
-      "realm": "teams",
-      "enabled": true,
-      "sslRequired": "none",
-      "registrationAllowed": false,
-      "resetPasswordAllowed": true,
-      "editUsernameAllowed": false,
-      "bruteForceProtected": true,
-      "clients": [
-        {
-          "clientId": "teams-ui",
-          "name": "Teams UI",
-          "description": "Angular Teams Management UI",
-          "enabled": true,
-          "clientAuthenticatorType": "client-secret",
-          "redirectUris": [
-            "http://platform-auth.127.0.0.1.sslip.io/*",
-            "http://engineering-platform.local/*",
-            "http://localhost:4200/*",
-            "http://pe-course-architect-peza.coder/*",
-            "http://teams-ui.127.0.0.1.sslip.io/*",
-            "http://teams-ui.127.0.0.1.sslip.io:8000/*"
-          ],
-          "webOrigins": [
-              "http://platform-auth.127.0.0.1.sslip.io",
-              "http://engineering-platform.local",
-              "http://localhost:4200",
-              "http://pe-course-architect-peza.coder:8000",
-              "http://teams-ui.127.0.0.1.sslip.io",
-              "http://teams-ui.127.0.0.1.sslip.io:8000"
-          ],
-          "publicClient": true,
-          "protocol": "openid-connect",
-          "attributes": {
-            "post.logout.redirect.uris": "http://platform-auth.127.0.0.1.sslip.io/*##http://localhost:4200/*##http://pe-course-architect-peza.coder:*"
-          }
-        }
-      ],
-      "users": [
-        {
-          "username": "teamlead1",
-          "enabled": true,
-          "firstName": "Team",
-          "lastName": "Lead",
-          "email": "teamlead1@company.com",
-          "emailVerified": true,
-          "credentials": [
-            {
-              "type": "password",
-              "value": "password123",
-              "temporary": false
-            }
-          ],
-          "realmRoles": ["team-leader"]
-        },
-        {
-          "username": "admin",
-          "enabled": true,
-          "firstName": "Admin",
-          "lastName": "User",
-          "email": "admin@company.com",
-          "emailVerified": true,
-          "credentials": [
-            {
-              "type": "password",
-              "value": "admin123",
-              "temporary": false
-            }
-          ],
-          "realmRoles": ["admin", "team-leader"]
-        }
-      ],
-      "roles": {
-        "realm": [
-          {
-            "name": "team-leader",
-            "description": "Can create and manage teams"
-          },
-          {
-            "name": "admin",
-            "description": "Full administrative access"
-          }
-        ]
-      }
-    }
-
